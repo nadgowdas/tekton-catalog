@@ -36,6 +36,8 @@ spec:
     - name: ibmcloud-api
       description: the ibmcloud api
       default: https://cloud.ibm.com
+    - name: registry-dockerconfigjson
+      description: dockerconfigjson for pullsecrets
   resourcetemplates:
     - apiVersion: v1
       kind: PersistentVolumeClaim
@@ -55,6 +57,19 @@ spec:
       type: Opaque
       stringData:
         API_KEY: $(params.apikey)
+    - apiVersion: v1
+      kind: Secret
+      data:
+        .dockerconfigjson: $(params.registry-dockerconfigjson)
+      metadata:
+        name: registry-pull-secret
+      type: kubernetes.io/dockerconfigjson
+    - apiVersion: v1
+      kind: ServiceAccount
+      imagePullSecrets:
+        - name: registry-pull-secret
+      metadata:
+        name: sa-pullsecret
     - apiVersion: tekton.dev/v1beta1
       kind: PipelineRun
       metadata:
@@ -66,6 +81,7 @@ spec:
           - name: artifacts
             persistentVolumeClaim:
               claimName: pipelinerun-$(uid)-pvc
+        serviceAccountName: sa-pullsecret      
         params:
           - name: repository
             value: $(params.repository)
